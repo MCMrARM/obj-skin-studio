@@ -33,7 +33,9 @@ class PrimaryCanvas {
 
     constructor() {
         this.canvas = document.getElementById("primaryCanvas");
-        this.renderer = new Renderer(this.canvas);
+        this.context = this.canvas.getContext("webgl");
+        this.renderer = new Renderer(this.canvas, this.context);
+        this.renderer.bgColor = [0x10 / 256, 0x1f / 256, 0x27 / 256, 1];
         this.renderer.draw();
         this.canvas.addEventListener("mousemove", (ev) => {
             if (ev.buttons & 1)
@@ -71,6 +73,9 @@ class PrimaryCanvas {
     }
 
     draw() {
+        this.canvas.width = this.canvas.offsetWidth;
+        this.canvas.height  = this.canvas.offsetHeight;
+
         this.renderer.draw();
     }
 
@@ -129,7 +134,7 @@ class Skin {
         this.imageUrl = null;
         this.model = null;
         this.modelStr = null;
-        this.updateCb = null;
+        this.updateCb = new Set();
     }
 
     loadFromLS() {
@@ -162,8 +167,62 @@ class Skin {
     }
 
     onUpdated() {
-        if (this.updateCb !== null)
-            this.updateCb();
+        for (let cb of this.updateCb)
+            cb(this);
+    }
+
+}
+
+class SkinListUi {
+
+    constructor() {
+        this.skinList = [];
+        this.skinDomList = [];
+        this.container = document.getElementById("skins");
+        this.renderCanvas = document.createElement("canvas");
+        this.renderCanvas.style.display = "none";
+        this.renderCanvas.width = 64;
+        this.renderCanvas.height = 64;
+        this.renderContext = this.renderCanvas.getContext("webgl", {preserveDrawingBuffer: true});
+        this.renderer = new Renderer(this.renderCanvas, this.renderContext);
+        this.renderer.bgColor = [0, 0, 0, 0];
+        this.skinUpdateCb = (skin) => this.redrawSkin(skin);
+    }
+
+    setSkinList(skinList) {
+        let addSkinBtn = this.container.lastChild;
+        while (this.container.firstChild)
+            this.container.removeChild(this.container.lastChild);
+        for (let skin of this.skinList)
+            skin.updateCb.remove(this.skinUpdateCb);
+        this.skinList = skinList;
+        this.skinDomList = [];
+        for (let skin of skinList) {
+            let dom = this.createEntryDOM(skin);
+            this.skinDomList.push(dom);
+            this.container.appendChild(dom);
+            skin.updateCb.add(this.skinUpdateCb);
+        }
+        this.container.appendChild(addSkinBtn);
+        for (let skin of skinList)
+            this.redrawSkin(skin);
+    }
+
+    redrawSkin(skin) {
+        if (skin.index >= this.skinList.length || this.skinList[skin.index] !== skin)
+            return;
+        this.renderer.setModel(skin.model);
+        this.renderer.setTexture(skin.image);
+        this.renderer.draw();
+        console.log(this.renderCanvas.toDataURL());
+        this.skinDomList[skin.index].img.src = this.renderCanvas.toDataURL();
+    }
+
+    createEntryDOM(skin) {
+        let el = document.createElement("li");
+        el.img = document.createElement("img");
+        el.appendChild(el.img);
+        return el;
     }
 
 }
@@ -171,9 +230,11 @@ class Skin {
 class UiManager {
 
     constructor() {
+        this.skins = [];
         this.activeSkin = null;
         this.primaryCanvas = new PrimaryCanvas();
         this.groupList = new GroupList((g) => this.primaryCanvas.setSelectedGroup(g));
+        this.skinListUi = new SkinListUi();
         this.defaultImage = null;
 
         UiHelper.loadImage("steve.png", (img) => this.setDefaultImage(img));
@@ -227,26 +288,29 @@ class UiManager {
 
     createSkin(index) {
         let skin = new Skin(index);
-        skin.updateCb = () => {
+        skin.updateCb.add(() => {
             if (skin === this.activeSkin)
                 this.setSkin(this.activeSkin);
-        };
+        });
         return skin;
     }
 
     addSkin() {
         let skin = this.createSkin(this.skins.length);
         this.skins.push(skin);
-        localStorage.setItem("skin.count", this.skins.length + 1);
+        localStorage.setItem("skin.count", this.skins.length);
+        this.skinListUi.setSkinList(this.skins);
         return skin;
     }
 
     setSkins(skins) {
         this.skins = skins;
-        if (this.skins.length === 0)
+        if (this.skins.length === 0) {
             this.setSkin(this.addSkin());
-        else
+        } else {
             this.setSkin(this.skins[0]);
+            this.skinListUi.setSkinList(this.skins);
+        }
     }
 
     loadCurrentSkins(callback) {

@@ -22,16 +22,22 @@ a {
     margin: 0;
     list-style: none;
 }
+#skins > li {
+    cursor: pointer;
+    margin-right: 4px;
+    padding: 0;
+    background: rgba(255, 255, 255, 0.2);
+    line-height: 0;
+}
 #addSkin {
     display: block;
     width: 64px;
     height: 64px;
-    line-height: 64px;
+    line-height: 64px !important;
     text-align: center;
     vertical-align: middle;
     font-size: 28px;
     padding: 0;
-    background: rgba(255, 255, 255, 0.2);
     border-radius: 2px;
 }
 #main {

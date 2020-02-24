@@ -20,12 +20,13 @@ class Renderer {
         "  gl_FragColor = texture2D(uSampler, vUV) * uColor;\n" +
         "}";
 
-    constructor(canvas) {
+    constructor(canvas, context) {
         this.canvas = canvas;
-        this.context = canvas.getContext('experimental-webgl');
+        this.context = context;
         this.rotationX = this.rotationY = 0;
         this.highlightedVertexStart = this.highlightedVertexEnd = -1;
         this.hasModel = this.hasTexture = false;
+        this.bgColor = [1, 1, 1, 1];
 
         let gl = this.context;
 
@@ -95,12 +96,9 @@ class Renderer {
     }
 
     draw() {
-        this.canvas.width = this.canvas.offsetWidth;
-        this.canvas.height  = this.canvas.offsetHeight;
-
         let gl = this.context;
         gl.viewport(0, 0, this.canvas.width, this.canvas.height);
-        gl.clearColor(0x10 / 256, 0x1f / 256, 0x27 / 256, 1);
+        gl.clearColor(this.bgColor[0], this.bgColor[1], this.bgColor[2], this.bgColor[3]);
         gl.enable(gl.DEPTH_TEST);
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
