@@ -34,6 +34,7 @@ class PrimaryCanvas {
     constructor() {
         this.canvas = document.getElementById("primaryCanvas");
         this.renderer = new Renderer(this.canvas);
+        this.renderer.draw();
         this.canvas.addEventListener("mousemove", (ev) => {
             if (ev.buttons & 1)
                 this.rotateByMouseDelta(ev.movementX, ev.movementY);
@@ -122,10 +123,47 @@ class GroupList {
 
 class Skin {
 
-    constructor() {
+    constructor(index) {
+        this.index = index;
         this.image = null;
         this.imageUrl = null;
         this.model = null;
+        this.modelStr = null;
+        this.updateCb = null;
+    }
+
+    loadFromLS() {
+        this.setImage(localStorage.getItem("skin." + this.index + ".image"));
+        this.modelStr = localStorage.getItem("skin." + this.index + ".model");
+        this.model = this.modelStr ? ObjModel.parse(this.modelStr) : null;
+        this.onUpdated();
+    }
+
+    setImage(url) {
+        this.imageUrl = url;
+        if (url == null) {
+            this.image = null;
+            return;
+        }
+        UiHelper.loadImage(url, (img) => {
+            if (this.imageUrl !== url)
+                return;
+            this.image = img;
+            this.onUpdated();
+        });
+    }
+
+    saveImageToLS() {
+        localStorage.setItem("skin." + this.index + ".image", this.imageUrl);
+    }
+
+    saveModelToLS() {
+        localStorage.setItem("skin." + this.index + ".model", this.modelStr);
+    }
+
+    onUpdated() {
+        if (this.updateCb !== null)
+            this.updateCb();
     }
 
 }
@@ -133,9 +171,10 @@ class Skin {
 class UiManager {
 
     constructor() {
-        this.activeSkin = new Skin();
+        this.activeSkin = null;
         this.primaryCanvas = new PrimaryCanvas();
         this.groupList = new GroupList((g) => this.primaryCanvas.setSelectedGroup(g));
+        this.defaultImage = null;
 
         UiHelper.loadImage("steve.png", (img) => this.setDefaultImage(img));
 
@@ -143,9 +182,11 @@ class UiManager {
             UiHelper.openFile((file) => {
                 let reader = new FileReader();
                 reader.addEventListener("loadend", () => {
-                    if (reader.readyState === FileReader.DONE) {
+                    if (reader.readyState === FileReader.DONE && this.activeSkin !== null) {
+                        this.activeSkin.modelStr = reader.result;
                         this.activeSkin.model = ObjModel.parse(reader.result);
-                        this.updateSkin();
+                        this.activeSkin.saveModelToLS();
+                        this.activeSkin.onUpdated();
                     }
                 });
                 reader.readAsText(file);
@@ -155,39 +196,68 @@ class UiManager {
             UiHelper.openFile((file) => {
                 let reader = new FileReader();
                 reader.addEventListener("loadend", () => {
-                    if (reader.readyState === FileReader.DONE) {
-                        let skin = this.activeSkin;
-                        skin.imageUrl = reader.result;
-                        UiHelper.loadImage(reader.result, (img) => {
-                            if (skin.imageUrl === reader.result) {
-                                skin.image = img;
-                                this.updateSkin();
-                            }
-                        });
+                    if (reader.readyState === FileReader.DONE && this.activeSkin !== null) {
+                        this.activeSkin.setImage(reader.result);
+                        this.activeSkin.saveImageToLS();
                     }
                 });
                 reader.readAsDataURL(file);
             });
         });
+
+        this.loadCurrentSkins((skins) => this.setSkins(skins));
     }
 
     setDefaultImage(image) {
         this.defaultImage = image;
-        if (this.activeSkin.image === null) {
-            this.activeSkin.image = image;
-            this.updateSkin();
-        }
+        if (this.activeSkin !== null && this.activeSkin.image === null)
+            this.setSkin(this.activeSkin);
     }
 
     setSkin(skin) {
-        this.primaryCanvas.setTexture(skin.image);
+        this.activeSkin = skin;
+        if (skin.image !== null)
+            this.primaryCanvas.setTexture(skin.image);
+        else
+            this.primaryCanvas.setTexture(this.defaultImage);
         this.primaryCanvas.setModel(skin.model);
         if (skin.model !== null)
             this.groupList.setObjects(skin.model.objects);
     }
 
-    updateSkin() {
-        this.setSkin(this.activeSkin);
+    createSkin(index) {
+        let skin = new Skin(index);
+        skin.updateCb = () => {
+            if (skin === this.activeSkin)
+                this.setSkin(this.activeSkin);
+        };
+        return skin;
+    }
+
+    addSkin() {
+        let skin = this.createSkin(this.skins.length);
+        this.skins.push(skin);
+        localStorage.setItem("skin.count", this.skins.length + 1);
+        return skin;
+    }
+
+    setSkins(skins) {
+        this.skins = skins;
+        if (this.skins.length === 0)
+            this.setSkin(this.addSkin());
+        else
+            this.setSkin(this.skins[0]);
+    }
+
+    loadCurrentSkins(callback) {
+        let skinCount = localStorage.getItem("skin.count") || 0;
+        let skins = [];
+        for (let i = 0; i < skinCount; i++) {
+            let skin = this.createSkin(i);
+            skin.loadFromLS();
+            skins.push(skin);
+        }
+        callback(skins);
     }
 
 }
