@@ -13,26 +13,32 @@ class Renderer {
         "}";
 
     static FRAGMENT_SHADER_CODE =
+        "uniform lowp vec4 uColor;\n" +
         "uniform sampler2D uSampler;\n" +
         "varying highp vec2 vUV;\n" +
         "void main(void) {\n" +
-        "  gl_FragColor = texture2D(uSampler, vUV);\n" +
+        "  gl_FragColor = texture2D(uSampler, vUV) * uColor;\n" +
         "}";
 
     constructor(canvas) {
         this.canvas = canvas;
         this.context = canvas.getContext('experimental-webgl');
         this.rotationX = this.rotationY = 0;
+        this.highlightedVertexStart = this.highlightedVertexEnd = -1;
 
         let gl = this.context;
 
         this.vertexShader = gl.createShader(gl.VERTEX_SHADER);
         gl.shaderSource(this.vertexShader, Renderer.VERTEX_SHADER_CODE);
         gl.compileShader(this.vertexShader);
+        if (!gl.getShaderParameter(this.vertexShader, gl.COMPILE_STATUS))
+            console.error("Failed to link vertex shader", gl.getShaderInfoLog(this.vertexShader));
 
         this.fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
         gl.shaderSource(this.fragmentShader, Renderer.FRAGMENT_SHADER_CODE);
         gl.compileShader(this.fragmentShader);
+        if (!gl.getShaderParameter(this.fragmentShader, gl.COMPILE_STATUS))
+            console.error("Failed to link fragment shader", gl.getShaderInfoLog(this.fragmentShader));
 
         this.program = gl.createProgram();
         gl.attachShader(this.program, this.vertexShader);
@@ -42,6 +48,7 @@ class Renderer {
             console.error("Failed to link shader", gl.getProgramInfoLog(this.program));
         }
         gl.useProgram(this.program);
+        this.colorLocation = gl.getUniformLocation(this.program, 'uColor');
         this.samplerLocation = gl.getUniformLocation(this.program, 'uSampler');
         this.projectionMatrixLocation = gl.getUniformLocation(this.program, 'uProjectionMatrix');
         this.positionLocation = gl.getAttribLocation(this.program, 'aPosition');
@@ -86,7 +93,7 @@ class Renderer {
         let mat = mat4.create();
         mat4.perspective(mat, 0.5, this.canvas.width / this.canvas.height, 0.1, 100);
         let lookMat = mat4.create();
-        mat4.lookAt(lookMat, [-20, 0, 0], [0, 0, 0], [0, 1, 0]);
+        mat4.lookAt(lookMat, [-40, 0, 0], [0, 0, 0], [0, 1, 0]);
         mat4.mul(mat, mat, lookMat);
         mat4.rotateZ(mat, mat, this.rotationY);
         mat4.rotateY(mat, mat, this.rotationX);
@@ -102,8 +109,15 @@ class Renderer {
         gl.activeTexture(gl.TEXTURE0);
         gl.bindTexture(gl.TEXTURE_2D, this.texture);
         gl.uniform1i(this.samplerLocation, 0);
+        gl.uniform4f(this.colorLocation, 1.0, 1.0, 1.0, 1.0);
 
         gl.drawArrays(gl.TRIANGLES, 0, this.vertexCount);
+
+        if (this.highlightedVertexStart !== this.highlightedVertexEnd) {
+            gl.clear(gl.DEPTH_BUFFER_BIT);
+            gl.uniform4f(this.colorLocation, 0.5, 0.5, 1.0, 0.75);
+            gl.drawArrays(gl.TRIANGLES, (this.highlightedVertexStart) * 3, (this.highlightedVertexEnd - this.highlightedVertexStart) * 3);
+        }
     }
 
 }

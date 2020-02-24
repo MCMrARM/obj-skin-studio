@@ -9,12 +9,15 @@ class ObjModel {
         this.normalData = normalData;
         this.uvData = uvData;
         this.indices = indices;
+        this.objects = [];
     }
 
     static parse(data) {
         let model = new ObjModel([], [], [], []);
         let lines = data.split("\n");
+        let vertexNum = 0;
         for (let line of lines) {
+            line = line.trim();
             if (line.startsWith("#"))
                 continue;
             let p = line.split(" ");
@@ -25,6 +28,17 @@ class ObjModel {
                 model.normalData.push([parseFloat(p[1]), parseFloat(p[2]), parseFloat(p[3])]);
             } else if (t === "vt") {
                 model.uvData.push([parseFloat(p[1]), parseFloat(p[2]), parseFloat(p[3])]);
+            } else if (t === "o") {
+                model.objects.push({
+                    "name": line.substr(2),
+                    "start": vertexNum,
+                    "groups": []
+                });
+            } else if (t === "g" && currObject != null) {
+                currObject["groups"].push({
+                    "name": line.substr(2),
+                    "start": vertexNum
+                });
             } else if (t === "f") {
                 let arr = [];
                 for (let i = 1; i < p.length; i++) {
@@ -34,13 +48,41 @@ class ObjModel {
                     else
                         console.log("Unsupported f format: " + line);
                 }
-                console.log(arr);
                 model.indices.push(arr);
+                vertexNum += arr.length - 2;
             } else {
                 console.log("Unexpected command: " + t);
             }
         }
+        model.fixObjects();
         return model;
+    }
+
+    fixObjects() {
+        let end = this.getVertexCount() / 3;
+        for (let i = this.objects.length - 1; i >= 0; --i) {
+            let gend = end;
+            for (let j = this.objects[i].groups.length - 1; j >= 0; --j) {
+                this.objects[i].groups[j]["end"] = gend;
+                gend = this.objects[i].groups[j]["start"];
+            }
+            if (gend > 0) {
+                this.objects[i].groups.push({
+                    "name": null,
+                    "start": this.objects[i]["start"],
+                    "end": gend
+                });
+            }
+            this.objects[i]["end"] = end;
+            end = this.objects[i]["start"];
+        }
+        if (end > 0) {
+            this.objects.push({
+                "name": null,
+                "start": 0,
+                "end": end
+            });
+        }
     }
 
     getVertexCount() {
@@ -65,7 +107,6 @@ class ObjModel {
             let vertex = this.vertexData[index];
             array.push(vertex[0], vertex[1], vertex[2]);
         }
-        console.log(array);
         return array;
     }
 

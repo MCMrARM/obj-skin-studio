@@ -1,0 +1,12 @@
+html, body {
+    cursor: default;
+    user-select: none;
+}
+#groupTree {
+    padding: 0;
+    list-style: none;
+    float: right;
+}
+#groupTree li.selected {
+    background: rgba(0, 176, 255, 0.3);
+}

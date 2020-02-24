@@ -1,7 +1,8 @@
 <!doctype html>
-<html>
+<html lang="en">
 <head>
     <title>Skin Studio</title>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
 <div class="skins">
@@ -11,6 +12,7 @@
 </div>
 <div class="main">
     <canvas id="primaryCanvas" width="512" height="512"></canvas>
+    <ul id="groupTree"></ul>
 </div>
 <script src="gl-matrix-min.js"></script>
 <script src="obj_parser.js"></script>
@@ -28,6 +30,9 @@
             let primaryCanvas = new PrimaryCanvas();
             primaryCanvas.setModel(p);
             primaryCanvas.setTexture(image);
+
+            let groupList = new GroupList((g) => primaryCanvas.setSelectedGroup(g));
+            groupList.setObjects(p.objects);
         };
         image.src = "steve.png";
     });
