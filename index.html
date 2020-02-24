@@ -15,6 +15,7 @@
 <script src="gl-matrix-min.js"></script>
 <script src="obj_parser.js"></script>
 <script src="renderer.js"></script>
+<script src="ui.js"></script>
 <script>
     fetch("test.obj", {method: "GET"}).then(function (response) {
         return response.text();
@@ -22,9 +23,8 @@
         let p = ObjModel.parse(resp);
         console.log(p);
 
-        let renderer = new Renderer(document.getElementById("primaryCanvas"));
-        renderer.setModel(p);
-        renderer.setActive(true);
+        let primaryCanvas = new PrimaryCanvas();
+        primaryCanvas.setModel(p);
     });
 </script>
 </body>

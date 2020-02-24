@@ -17,8 +17,7 @@ class Renderer {
     constructor(canvas) {
         this.canvas = canvas;
         this.context = canvas.getContext('experimental-webgl');
-        this.active = false;
-        this.model = null;
+        this.rotationX = this.rotationY = 0;
 
         let gl = this.context;
 
@@ -45,16 +44,7 @@ class Renderer {
         this.indexBuffer = gl.createBuffer();
     }
 
-    setActive(active) {
-        if (this.active === active)
-            return;
-        this.active = active;
-        if (this.active)
-            this.draw();
-    }
-
     setModel(model) {
-        this.model = model;
         let indexArray = model.createIndexArray();
         this.vertexCount = indexArray.length / 3;
 
@@ -77,6 +67,11 @@ class Renderer {
 
         let mat = mat4.create();
         mat4.perspective(mat, 0.5, this.canvas.width / this.canvas.height, 0.1, 100);
+        let lookMat = mat4.create();
+        mat4.lookAt(lookMat, [-20, 0, 0], [0, 0, 0], [0, 1, 0]);
+        mat4.mul(mat, mat, lookMat);
+        mat4.rotateY(mat, mat, this.rotationX);
+        mat4.rotateZ(mat, mat, this.rotationY);
         gl.uniformMatrix4fv(this.projectionMatrixLocation, false, mat);
 
         gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexBuffer);
@@ -85,8 +80,6 @@ class Renderer {
 
         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.indexBuffer);
         gl.drawElements(gl.TRIANGLES, this.vertexCount, gl.UNSIGNED_SHORT, 0);
-
-        requestAnimationFrame(() => this.draw());
     }
 
 }
