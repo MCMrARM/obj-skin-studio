@@ -29,6 +29,9 @@ a {
     background: rgba(255, 255, 255, 0.2);
     line-height: 0;
 }
+#skins > li.selected {
+    background: rgba(255, 255, 255, 0.3);
+}
 #addSkin {
     display: block;
     width: 64px;

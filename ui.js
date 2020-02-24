@@ -175,9 +175,10 @@ class Skin {
 
 class SkinListUi {
 
-    constructor() {
+    constructor(activeCallback) {
         this.skinList = [];
         this.skinDomList = [];
+        this.selectedSkinDom = null;
         this.container = document.getElementById("skins");
         this.renderCanvas = document.createElement("canvas");
         this.renderCanvas.style.display = "none";
@@ -187,6 +188,7 @@ class SkinListUi {
         this.renderer = new Renderer(this.renderCanvas, this.renderContext);
         this.renderer.bgColor = [0, 0, 0, 0];
         this.skinUpdateCb = (skin) => this.redrawSkin(skin);
+        this.activeCallback = activeCallback;
     }
 
     setSkinList(skinList) {
@@ -194,9 +196,10 @@ class SkinListUi {
         while (this.container.firstChild)
             this.container.removeChild(this.container.lastChild);
         for (let skin of this.skinList)
-            skin.updateCb.remove(this.skinUpdateCb);
+            skin.updateCb.delete(this.skinUpdateCb);
         this.skinList = skinList;
         this.skinDomList = [];
+        this.selectedSkinDom = null;
         for (let skin of skinList) {
             let dom = this.createEntryDOM(skin);
             this.skinDomList.push(dom);
@@ -218,10 +221,23 @@ class SkinListUi {
         this.skinDomList[skin.index].img.src = this.renderCanvas.toDataURL();
     }
 
+    setSelected(skin) {
+        if (skin.index >= this.skinList.length || this.skinList[skin.index] !== skin)
+            skin = null;
+        if (this.selectedSkinDom !== null)
+            this.selectedSkinDom.classList.remove("selected");
+        this.selectedSkinDom = skin ? this.skinDomList[skin.index] : null;
+        if (this.selectedSkinDom !== null)
+            this.selectedSkinDom.classList.add("selected");
+    }
+
     createEntryDOM(skin) {
         let el = document.createElement("li");
         el.img = document.createElement("img");
         el.appendChild(el.img);
+        el.addEventListener("click", () => {
+            this.activeCallback(skin);
+        });
         return el;
     }
 
@@ -234,7 +250,7 @@ class UiManager {
         this.activeSkin = null;
         this.primaryCanvas = new PrimaryCanvas();
         this.groupList = new GroupList((g) => this.primaryCanvas.setSelectedGroup(g));
-        this.skinListUi = new SkinListUi();
+        this.skinListUi = new SkinListUi((skin) => this.setSkin(skin));
         this.defaultImage = null;
 
         UiHelper.loadImage("steve.png", (img) => this.setDefaultImage(img));
@@ -266,6 +282,9 @@ class UiManager {
             });
         });
 
+        document.getElementById("addSkin").addEventListener("click",
+            () => this.setSkin(this.addSkin()));
+
         this.loadCurrentSkins((skins) => this.setSkins(skins));
     }
 
@@ -284,6 +303,7 @@ class UiManager {
         this.primaryCanvas.setModel(skin.model);
         if (skin.model !== null)
             this.groupList.setObjects(skin.model.objects);
+        this.skinListUi.setSelected(skin);
     }
 
     createSkin(index) {
@@ -308,8 +328,8 @@ class UiManager {
         if (this.skins.length === 0) {
             this.setSkin(this.addSkin());
         } else {
-            this.setSkin(this.skins[0]);
             this.skinListUi.setSkinList(this.skins);
+            this.setSkin(this.skins[0]);
         }
     }
 
