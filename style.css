@@ -22,14 +22,14 @@ a {
     margin: 0;
     list-style: none;
 }
-#skins > li {
+#skins > .skin, #addSkin {
     cursor: pointer;
     margin-right: 4px;
     padding: 0;
     background: rgba(255, 255, 255, 0.2);
     line-height: 0;
 }
-#skins > li.selected {
+#skins > .skin.selected {
     background: rgba(255, 255, 255, 0.3);
 }
 #addSkin {
@@ -42,6 +42,11 @@ a {
     font-size: 28px;
     padding: 0;
     border-radius: 2px;
+}
+#export {
+    margin-left: auto;
+    align-self: center;
+    padding: 8px;
 }
 #main {
     flex-grow: 1;
@@ -80,4 +85,5 @@ a {
     color: #fff;
     text-decoration: none;
     border-radius: 2px;
+    cursor: pointer;
 }

@@ -27,7 +27,7 @@ class ObjModel {
             } else if (t === "vn") {
                 model.normalData.push([parseFloat(p[1]), parseFloat(p[2]), parseFloat(p[3])]);
             } else if (t === "vt") {
-                model.uvData.push([parseFloat(p[1]), parseFloat(p[2]), parseFloat(p[3])]);
+                model.uvData.push([parseFloat(p[1]), parseFloat(p[2])]);
             } else if (t === "o") {
                 model.objects.push({
                     "name": line.substr(2),
@@ -115,6 +115,21 @@ class ObjModel {
         for (let index of this.createTriangles(ObjModel.INDEX_UV)) {
             let vertex = this.uvData[index];
             array.push(vertex[0], 1 - vertex[1]);
+        }
+        return array;
+    }
+
+    getMinecraftIndices() {
+        // There's a bug where Minecraft in fact only supports 4-sized indices, let's workaround it (it doesn't support 3-sided ones properly even)
+        let array = [];
+        for (let i of this.indices) {
+            for (let j = 0; j < i.length - 2; j += 2) {
+                if (j !== i.length - 3) { // If we have >=4 it's easy
+                    array.push([i[0], i[j + 1], i[j + 2], i[j + 3]]);
+                } else { // otherwise duplicate one of the vertexes
+                    array.push([i[0], i[j + 1], i[j + 2], i[j + 2]]);
+                }
+            }
         }
         return array;
     }

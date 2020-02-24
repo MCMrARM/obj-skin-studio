@@ -27,6 +27,41 @@ class UiHelper {
         image.src = url;
     }
 
+    static saveBlob(blob, name) {
+        let url = URL.createObjectURL(blob);
+        let link = document.createElement("a"); // Or maybe get it from the current document
+        link.href = url;
+        link.download = name;
+        link.innerHTML = name;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        setTimeout(() => {
+            URL.revokeObjectURL(url);
+        }, 20000);
+    }
+
+    // https://stackoverflow.com/a/8472700
+    static generateUUID =
+        (typeof(window.crypto) != 'undefined' && typeof(window.crypto.getRandomValues) != 'undefined')
+            ? () => {
+                let buf = new Uint16Array(8);
+                window.crypto.getRandomValues(buf);
+                let pad4 = function(num) {
+                    let ret = num.toString(16);
+                    while (ret.length < 4)
+                        ret = "0" + ret;
+                    return ret;
+                };
+                return (pad4(buf[0])+pad4(buf[1])+"-"+pad4(buf[2])+"-"+pad4(buf[3])+"-"+pad4(buf[4])+"-"+pad4(buf[5])+pad4(buf[6])+pad4(buf[7]));
+            }
+            : () => {
+                return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+                    var r = Math.random()*16|0, v = c == 'x' ? r : (r&0x3|0x8);
+                    return v.toString(16);
+                });
+            };
+
 }
 
 class PrimaryCanvas {
@@ -166,6 +201,37 @@ class Skin {
         localStorage.setItem("skin." + this.index + ".model", this.modelStr);
     }
 
+    exportGeometry() {
+        if (this.image === null || this.model === null)
+            return null;
+        return {
+            "bones": [
+                {
+                    "name": "root"
+                },
+                {
+                    "name": "waist",
+                    "parent": "root",
+                    "pivot": [0, 12, 0]
+                },
+                {
+                    "name": "body",
+                    "parent": "waist",
+                    "pivot": [0, 24, 0],
+                    "poly_mesh": {
+                        "normalized_uvs": true,
+                        "normals": this.model.normalData,
+                        "positions": this.model.vertexData,
+                        "uvs": this.model.uvData,
+                        "polys": this.model.getMinecraftIndices()
+                    }
+                }
+            ],
+            "texturewidth": this.image.width,
+            "textureheight": this.image.height
+        };
+    }
+
     onUpdated() {
         for (let cb of this.updateCb)
             cb(this);
@@ -192,6 +258,7 @@ class SkinListUi {
     }
 
     setSkinList(skinList) {
+        let exportBtn = this.container.lastChild;
         let addSkinBtn = this.container.lastChild;
         while (this.container.firstChild)
             this.container.removeChild(this.container.lastChild);
@@ -207,6 +274,7 @@ class SkinListUi {
             skin.updateCb.add(this.skinUpdateCb);
         }
         this.container.appendChild(addSkinBtn);
+        this.container.appendChild(exportBtn);
         for (let skin of skinList)
             this.redrawSkin(skin);
     }
@@ -233,6 +301,7 @@ class SkinListUi {
 
     createEntryDOM(skin) {
         let el = document.createElement("li");
+        el.classList.add("skin");
         el.img = document.createElement("img");
         el.appendChild(el.img);
         el.addEventListener("click", () => {
@@ -284,6 +353,8 @@ class UiManager {
 
         document.getElementById("addSkin").addEventListener("click",
             () => this.setSkin(this.addSkin()));
+        document.getElementById("export").addEventListener("click",
+            () => this.export());
 
         this.loadCurrentSkins((skins) => this.setSkins(skins));
     }
@@ -342,6 +413,85 @@ class UiManager {
             skins.push(skin);
         }
         callback(skins);
+    }
+
+    exportManifest() {
+        return {
+            "format_version": 2,
+            "header": {
+                "name": "Custom Skin Pack",
+                "uuid": UiHelper.generateUUID(),
+                "version": [1, 0, 0]
+            },
+            "modules": [
+                {
+                    "type": "skin_pack",
+                    "uuid": UiHelper.generateUUID(),
+                    "version": [1, 0, 0]
+                }
+            ]
+        };
+    }
+
+    exportSkinList() {
+        let skins = [];
+        for (let skin of this.skins) {
+            skins.push({
+                "localization_name": "Skin #" + skin.index,
+                "geometry": "geometry.n" + skin.index,
+                "texture": "skin_" + skin.index + ".png",
+                "type": "free"
+            });
+        }
+        return {
+            "skins": skins,
+            "serialize_name": "Custom Skins",
+            "localization_name": "Custom Skins"
+        };
+    }
+
+    exportGeometry() {
+        let result = {
+            "format_version": "1.8.0"
+        };
+        for (let skin of this.skins) {
+            let geo = skin.exportGeometry();
+            if (geo !== null)
+                result["geometry.n" + skin.index] = geo;
+        }
+        return result;
+    }
+
+    export() {
+        zip.createWriter(new zip.BlobWriter("application/zip"), (writer) => {
+            let textFiles = [
+                ["manifest.json", JSON.stringify(this.exportManifest())],
+                ["skins.json", JSON.stringify(this.exportSkinList())],
+                ["geometry.json", JSON.stringify(this.exportGeometry())]
+            ];
+
+            let writeText = (idx, cb) => {
+                if (idx >= textFiles.length) {
+                    cb();
+                } else {
+                    let fi = textFiles[idx];
+                    writer.add(fi[0], new zip.TextReader(fi[1]), () => writeText(idx + 1, cb));
+                }
+            };
+            let writeSkin = (idx, cb) => {
+                if (idx >= this.skins.length) {
+                    cb();
+                } else {
+                    writer.add("skin_" + this.skins[idx].index + ".png", new zip.Data64URIReader(this.skins[idx].imageUrl), () => writeSkin(idx + 1, cb));
+                }
+            };
+
+            writeText(0, () => writeSkin(0, () => writer.close((blob) => {
+                UiHelper.saveBlob(blob, "skinpack.zip");
+            })));
+        }, (err) => {
+            alert("Couldn't create zip writer: " + err);
+        });
     }
 
 }
