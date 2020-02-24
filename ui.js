@@ -193,12 +193,19 @@ class Skin {
         });
     }
 
+    deleteFromLS() {
+        localStorage.removeItem("skin." + this.index + ".image");
+        localStorage.removeItem("skin." + this.index + ".model");
+    }
+
     saveImageToLS() {
-        localStorage.setItem("skin." + this.index + ".image", this.imageUrl);
+        if (this.imageUrl !== null)
+            localStorage.setItem("skin." + this.index + ".image", this.imageUrl);
     }
 
     saveModelToLS() {
-        localStorage.setItem("skin." + this.index + ".model", this.modelStr);
+        if (this.modelStr !== null)
+            localStorage.setItem("skin." + this.index + ".model", this.modelStr);
     }
 
     exportGeometry() {
@@ -353,6 +360,8 @@ class UiManager {
 
         document.getElementById("addSkin").addEventListener("click",
             () => this.setSkin(this.addSkin()));
+        document.getElementById("deleteSkin").addEventListener("click",
+            () => this.deleteSkin(this.activeSkin));
         document.getElementById("export").addEventListener("click",
             () => this.export());
 
@@ -384,6 +393,20 @@ class UiManager {
                 this.setSkin(this.activeSkin);
         });
         return skin;
+    }
+
+    deleteSkin(skin) {
+        skin.deleteFromLS();
+        this.skins.splice(skin.index, 1);
+        for (let i = skin.index; i < this.skins.length; i++) {
+            this.skins[i].deleteFromLS();
+            this.skins[i].index = i;
+            this.skins[i].saveImageToLS();
+            this.skins[i].saveModelToLS();
+        }
+        localStorage.setItem("skin.count", this.skins.length);
+        this.skinListUi.setSkinList(this.skins);
+        this.setSkin(this.skins[0]);
     }
 
     addSkin() {
