@@ -7,6 +7,8 @@ class PrimaryCanvas {
             if (ev.buttons & 1)
                 this.rotateByMouseDelta(ev.movementX, ev.movementY);
         });
+
+        window.addEventListener('resize', () => this.draw(), false);
     }
 
     setModel(model) {

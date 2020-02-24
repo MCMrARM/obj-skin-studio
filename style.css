@@ -1,11 +1,65 @@
 html, body {
     cursor: default;
     user-select: none;
-}
-#groupTree {
     padding: 0;
+    margin: 0;
+    height: 100%;
+    background: #000a12;
+    color: #fff;
+    font-family: sans-serif;
+}
+body {
+    display: flex;
+    flex-direction: column;
+}
+a {
+    color: #2979ff;
+}
+#skins {
+    display: flex;
+    flex-direction: row;
+    padding: 4px;
+    margin: 0;
     list-style: none;
-    float: right;
+}
+#addSkin {
+    display: block;
+    width: 64px;
+    height: 64px;
+    line-height: 64px;
+    text-align: center;
+    vertical-align: middle;
+    font-size: 28px;
+    padding: 0;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 2px;
+}
+#main {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: row;
+}
+#primaryCanvas {
+    width: 1px;
+    flex-basis: 1px;
+    flex-grow: 1;
+}
+#panel {
+    min-width: 200px;
+    background: #263238;
+}
+.panelTitle {
+    padding: 4px 6px;
+    margin: 0;
+    background: #37474f;
+}
+#groupTree, #inspector {
+    padding: 0;
+    margin: 0;
+    list-style: none;
+}
+#groupTree li, #inspector li {
+    padding: 2px 6px;
 }
 #groupTree li.selected {
     background: rgba(0, 176, 255, 0.3);

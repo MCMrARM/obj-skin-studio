@@ -5,14 +5,22 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-<div class="skins">
-<ul>
-    <li><a href="#">Add skin</a></li>
+<ul id="skins">
+    <li id="addSkin"><span>+</span></li>
 </ul>
-</div>
-<div class="main">
-    <canvas id="primaryCanvas" width="512" height="512"></canvas>
-    <ul id="groupTree"></ul>
+<div id="main">
+    <canvas id="primaryCanvas"></canvas>
+    <div id="panel">
+        <h3 class="panelTitle">Inspector</h3>
+        <ul id="inspector">
+            <li>
+                <span>Skin scale</span>
+                <input type="text" id="skinScale" value="1.0">
+            </li>
+        </ul>
+        <h3 class="panelTitle">Geometry Hierarchy</h3>
+        <ul id="groupTree"></ul>
+    </div>
 </div>
 <script src="gl-matrix-min.js"></script>
 <script src="obj_parser.js"></script>

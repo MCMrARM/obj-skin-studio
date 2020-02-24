@@ -84,8 +84,11 @@ class Renderer {
     }
 
     draw() {
+        this.canvas.width = this.canvas.offsetWidth;
+        this.canvas.height  = this.canvas.offsetHeight;
+
         let gl = this.context;
-        gl.clearColor(255, 255, 255, 1);
+        gl.clearColor(0x10 / 256, 0x1f / 256, 0x27 / 256, 1);
         gl.enable(gl.DEPTH_TEST);
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
         gl.viewport(0, 0, this.canvas.width, this.canvas.height);
@@ -93,7 +96,7 @@ class Renderer {
         let mat = mat4.create();
         mat4.perspective(mat, 0.5, this.canvas.width / this.canvas.height, 0.1, 100);
         let lookMat = mat4.create();
-        mat4.lookAt(lookMat, [-40, 0, 0], [0, 0, 0], [0, 1, 0]);
+        mat4.lookAt(lookMat, [-40, 0, 0], [0, 5, 0], [0, 1, 0]);
         mat4.mul(mat, mat, lookMat);
         mat4.rotateZ(mat, mat, this.rotationY);
         mat4.rotateY(mat, mat, this.rotationX);
@@ -114,6 +117,7 @@ class Renderer {
         gl.drawArrays(gl.TRIANGLES, 0, this.vertexCount);
 
         if (this.highlightedVertexStart !== this.highlightedVertexEnd) {
+            gl.clearColor(1, 1, 1, 1);
             gl.clear(gl.DEPTH_BUFFER_BIT);
             gl.uniform4f(this.colorLocation, 0.5, 0.5, 1.0, 0.75);
             gl.drawArrays(gl.TRIANGLES, (this.highlightedVertexStart) * 3, (this.highlightedVertexEnd - this.highlightedVertexStart) * 3);
