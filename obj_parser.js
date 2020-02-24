@@ -95,7 +95,7 @@ class ObjModel {
     createTriangles(layer) {
         let array = [];
         for (let i of this.indices) {
-            for (let j = 0; j < i.length - 2; i++)
+            for (let j = 0; j < i.length - 2; j++)
                 array.push(i[0][layer], i[j + 1][layer], i[j + 2][layer]);
         }
         return array;
