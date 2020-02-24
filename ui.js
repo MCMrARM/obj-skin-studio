@@ -265,8 +265,8 @@ class SkinListUi {
     }
 
     setSkinList(skinList) {
-        let exportBtn = this.container.lastChild;
-        let addSkinBtn = this.container.lastChild;
+        let exportBtn = document.getElementById("export");
+        let addSkinBtn = document.getElementById("addSkin");
         while (this.container.firstChild)
             this.container.removeChild(this.container.lastChild);
         for (let skin of this.skinList)
@@ -405,8 +405,7 @@ class UiManager {
             this.skins[i].saveModelToLS();
         }
         localStorage.setItem("skin.count", this.skins.length);
-        this.skinListUi.setSkinList(this.skins);
-        this.setSkin(this.skins[0]);
+        this.setSkins(this.skins);
     }
 
     addSkin() {
