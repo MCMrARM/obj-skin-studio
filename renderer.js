@@ -109,9 +109,9 @@ class Renderer {
         let mat = mat4.create();
         mat4.perspective(mat, 0.5, this.canvas.width / this.canvas.height, 0.1, 100);
         let lookMat = mat4.create();
-        mat4.lookAt(lookMat, [-10, 0, 0], [0, 1, 0], [0, 1, 0]);
+        mat4.lookAt(lookMat, [0, 0, -10], [0, 1, 0], [0, 1, 0]);
         mat4.mul(mat, mat, lookMat);
-        mat4.rotateZ(mat, mat, this.rotationY);
+        mat4.rotateX(mat, mat, -this.rotationY);
         mat4.rotateY(mat, mat, this.rotationX);
         mat4.scale(mat, mat, [scale, scale, scale]);
         gl.uniformMatrix4fv(this.projectionMatrixLocation, false, mat);
