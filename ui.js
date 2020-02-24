@@ -11,6 +11,11 @@ class PrimaryCanvas {
 
     setModel(model) {
         this.renderer.setModel(model);
+        // this.draw();
+    }
+
+    setTexture(image) {
+        this.renderer.setTexture(image);
         this.draw();
     }
 

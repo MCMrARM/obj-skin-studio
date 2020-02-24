@@ -5,13 +5,18 @@ class Renderer {
     static VERTEX_SHADER_CODE =
         "uniform mat4 uProjectionMatrix;\n" +
         "attribute vec3 aPosition;\n" +
+        "attribute vec2 aUV;\n" +
+        "varying highp vec2 vUV;\n" +
         "void main(void) {\n" +
         "  gl_Position = uProjectionMatrix * vec4(aPosition, 1.0);\n" +
+        "  vUV = aUV;\n" +
         "}";
 
     static FRAGMENT_SHADER_CODE =
+        "uniform sampler2D uSampler;\n" +
+        "varying highp vec2 vUV;\n" +
         "void main(void) {\n" +
-        "  gl_FragColor = vec4(1.0, 0.0, 0.0, 1.0);\n" +
+        "  gl_FragColor = texture2D(uSampler, vUV);\n" +
         "}";
 
     constructor(canvas) {
@@ -37,30 +42,43 @@ class Renderer {
             console.error("Failed to link shader", gl.getProgramInfoLog(this.program));
         }
         gl.useProgram(this.program);
+        this.samplerLocation = gl.getUniformLocation(this.program, 'uSampler');
         this.projectionMatrixLocation = gl.getUniformLocation(this.program, 'uProjectionMatrix');
         this.positionLocation = gl.getAttribLocation(this.program, 'aPosition');
+        this.uvLocation = gl.getAttribLocation(this.program, 'aUV');
 
         this.vertexBuffer = gl.createBuffer();
-        this.indexBuffer = gl.createBuffer();
+        this.uvBuffer = gl.createBuffer();
+
+        this.texture = gl.createTexture();
     }
 
     setModel(model) {
-        let indexArray = model.createIndexArray();
-        this.vertexCount = indexArray.length / 3;
+        this.vertexCount = model.getVertexCount();
 
         let gl = this.context;
         gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexBuffer);
         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(model.createVertexArray()), gl.STATIC_DRAW);
+        gl.bindBuffer(gl.ARRAY_BUFFER, this.uvBuffer);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(model.createUVArray()), gl.STATIC_DRAW);
         gl.bindBuffer(gl.ARRAY_BUFFER, null);
+    }
 
-        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.indexBuffer);
-        gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(indexArray), gl.STATIC_DRAW);
-        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, null);
+    setTexture(image) {
+        let gl = this.context;
+        gl.bindTexture(gl.TEXTURE_2D, this.texture);
+        console.log(image.width, image.height, image);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+        gl.bindTexture(gl.TEXTURE_2D, null);
     }
 
     draw() {
         let gl = this.context;
-        gl.clearColor(0, 0, 0, 1);
+        gl.clearColor(255, 255, 255, 1);
         gl.enable(gl.DEPTH_TEST);
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
         gl.viewport(0, 0, this.canvas.width, this.canvas.height);
@@ -70,16 +88,22 @@ class Renderer {
         let lookMat = mat4.create();
         mat4.lookAt(lookMat, [-20, 0, 0], [0, 0, 0], [0, 1, 0]);
         mat4.mul(mat, mat, lookMat);
-        mat4.rotateY(mat, mat, this.rotationX);
         mat4.rotateZ(mat, mat, this.rotationY);
+        mat4.rotateY(mat, mat, this.rotationX);
         gl.uniformMatrix4fv(this.projectionMatrixLocation, false, mat);
 
         gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexBuffer);
         gl.vertexAttribPointer(this.positionLocation, 3, gl.FLOAT, false, 0, 0);
         gl.enableVertexAttribArray(this.positionLocation);
+        gl.bindBuffer(gl.ARRAY_BUFFER, this.uvBuffer);
+        gl.vertexAttribPointer(this.uvLocation, 2, gl.FLOAT, false, 0, 0);
+        gl.enableVertexAttribArray(this.uvLocation);
 
-        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.indexBuffer);
-        gl.drawElements(gl.TRIANGLES, this.vertexCount, gl.UNSIGNED_SHORT, 0);
+        gl.activeTexture(gl.TEXTURE0);
+        gl.bindTexture(gl.TEXTURE_2D, this.texture);
+        gl.uniform1i(this.samplerLocation, 0);
+
+        gl.drawArrays(gl.TRIANGLES, 0, this.vertexCount);
     }
 
 }

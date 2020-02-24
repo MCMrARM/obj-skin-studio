@@ -20,11 +20,16 @@
     fetch("test.obj", {method: "GET"}).then(function (response) {
         return response.text();
     }).then(function (resp) {
-        let p = ObjModel.parse(resp);
-        console.log(p);
+        let image = new Image();
+        image.onload = function() {
+            let p = ObjModel.parse(resp);
+            console.log(p);
 
-        let primaryCanvas = new PrimaryCanvas();
-        primaryCanvas.setModel(p);
+            let primaryCanvas = new PrimaryCanvas();
+            primaryCanvas.setModel(p);
+            primaryCanvas.setTexture(image);
+        };
+        image.src = "steve.png";
     });
 </script>
 </body>
