@@ -11,8 +11,12 @@
 <div id="main">
     <canvas id="primaryCanvas"></canvas>
     <div id="panel">
-        <h3 class="panelTitle">Inspector</h3>
+        <h3 class="panelTitle">Options</h3>
         <ul id="inspector">
+            <li>
+                <a href="#" class="button" id="upload-model">Upload model</a>
+                <a href="#" class="button" id="upload-texture">Upload texture</a>
+            </li>
             <li>
                 <span>Skin scale</span>
                 <input type="text" id="skinScale" value="1.0">
@@ -27,23 +31,7 @@
 <script src="renderer.js"></script>
 <script src="ui.js"></script>
 <script>
-    fetch("test.obj", {method: "GET"}).then(function (response) {
-        return response.text();
-    }).then(function (resp) {
-        let image = new Image();
-        image.onload = function() {
-            let p = ObjModel.parse(resp);
-            console.log(p);
-
-            let primaryCanvas = new PrimaryCanvas();
-            primaryCanvas.setModel(p);
-            primaryCanvas.setTexture(image);
-
-            let groupList = new GroupList((g) => primaryCanvas.setSelectedGroup(g));
-            groupList.setObjects(p.objects);
-        };
-        image.src = "steve.png";
-    });
+    let uiManager = new UiManager();
 </script>
 </body>
 </html>

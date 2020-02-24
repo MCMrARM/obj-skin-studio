@@ -1,3 +1,34 @@
+class UiHelper {
+
+    static fileInput = null;
+
+    static openFile(callback) {
+        if (UiHelper.fileInput === null) {
+            let el = document.createElement("input");
+            el.type = "file";
+            el.style.display = "none";
+            document.body.appendChild(el);
+            console.log(el);
+            UiHelper.fileInput = el;
+        }
+        UiHelper.fileInput.onchange = (ev) => {
+            if (ev.target.files.length !== 1)
+                return;
+            callback(ev.target.files[0]);
+        };
+        UiHelper.fileInput.click();
+    }
+
+    static loadImage(url, cb) {
+        let image = new Image();
+        image.onload = () => {
+            cb(image);
+        };
+        image.src = url;
+    }
+
+}
+
 class PrimaryCanvas {
 
     constructor() {
@@ -13,7 +44,7 @@ class PrimaryCanvas {
 
     setModel(model) {
         this.renderer.setModel(model);
-        // this.draw();
+        this.draw();
     }
 
     setTexture(image) {
@@ -85,6 +116,78 @@ class GroupList {
         });
         e.appendChild(text);
         return e;
+    }
+
+}
+
+class Skin {
+
+    constructor() {
+        this.image = null;
+        this.imageUrl = null;
+        this.model = null;
+    }
+
+}
+
+class UiManager {
+
+    constructor() {
+        this.activeSkin = new Skin();
+        this.primaryCanvas = new PrimaryCanvas();
+        this.groupList = new GroupList((g) => this.primaryCanvas.setSelectedGroup(g));
+
+        UiHelper.loadImage("steve.png", (img) => this.setDefaultImage(img));
+
+        document.getElementById("upload-model").addEventListener("click", () => {
+            UiHelper.openFile((file) => {
+                let reader = new FileReader();
+                reader.addEventListener("loadend", () => {
+                    if (reader.readyState === FileReader.DONE) {
+                        this.activeSkin.model = ObjModel.parse(reader.result);
+                        this.updateSkin();
+                    }
+                });
+                reader.readAsText(file);
+            });
+        });
+        document.getElementById("upload-texture").addEventListener("click", () => {
+            UiHelper.openFile((file) => {
+                let reader = new FileReader();
+                reader.addEventListener("loadend", () => {
+                    if (reader.readyState === FileReader.DONE) {
+                        let skin = this.activeSkin;
+                        skin.imageUrl = reader.result;
+                        UiHelper.loadImage(reader.result, (img) => {
+                            if (skin.imageUrl === reader.result) {
+                                skin.image = img;
+                                this.updateSkin();
+                            }
+                        });
+                    }
+                });
+                reader.readAsDataURL(file);
+            });
+        });
+    }
+
+    setDefaultImage(image) {
+        this.defaultImage = image;
+        if (this.activeSkin.image === null) {
+            this.activeSkin.image = image;
+            this.updateSkin();
+        }
+    }
+
+    setSkin(skin) {
+        this.primaryCanvas.setTexture(skin.image);
+        this.primaryCanvas.setModel(skin.model);
+        if (skin.model !== null)
+            this.groupList.setObjects(skin.model.objects);
+    }
+
+    updateSkin() {
+        this.setSkin(this.activeSkin);
     }
 
 }

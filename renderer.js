@@ -25,6 +25,7 @@ class Renderer {
         this.context = canvas.getContext('experimental-webgl');
         this.rotationX = this.rotationY = 0;
         this.highlightedVertexStart = this.highlightedVertexEnd = -1;
+        this.hasModel = this.hasTexture = false;
 
         let gl = this.context;
 
@@ -61,6 +62,10 @@ class Renderer {
     }
 
     setModel(model) {
+        if (model === null) {
+            this.hasModel = false;
+            return;
+        }
         this.vertexCount = model.getVertexCount();
 
         let gl = this.context;
@@ -69,18 +74,24 @@ class Renderer {
         gl.bindBuffer(gl.ARRAY_BUFFER, this.uvBuffer);
         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(model.createUVArray()), gl.STATIC_DRAW);
         gl.bindBuffer(gl.ARRAY_BUFFER, null);
+        this.hasModel = true;
+        this.highlightedVertexStart = this.highlightedVertexEnd = -1;
     }
 
     setTexture(image) {
+        if (image === null) {
+            this.hasTexture = false;
+            return;
+        }
         let gl = this.context;
         gl.bindTexture(gl.TEXTURE_2D, this.texture);
-        console.log(image.width, image.height, image);
         gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
         gl.bindTexture(gl.TEXTURE_2D, null);
+        this.hasTexture = true;
     }
 
     draw() {
@@ -88,10 +99,13 @@ class Renderer {
         this.canvas.height  = this.canvas.offsetHeight;
 
         let gl = this.context;
+        gl.viewport(0, 0, this.canvas.width, this.canvas.height);
         gl.clearColor(0x10 / 256, 0x1f / 256, 0x27 / 256, 1);
         gl.enable(gl.DEPTH_TEST);
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-        gl.viewport(0, 0, this.canvas.width, this.canvas.height);
+
+        if (!this.hasModel || !this.hasTexture)
+            return;
 
         let mat = mat4.create();
         mat4.perspective(mat, 0.5, this.canvas.width / this.canvas.height, 0.1, 100);

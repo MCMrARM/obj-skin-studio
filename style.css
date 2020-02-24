@@ -64,3 +64,11 @@ a {
 #groupTree li.selected {
     background: rgba(0, 176, 255, 0.3);
 }
+.button {
+    display: inline-block;
+    padding: 2px 4px;
+    background: #2979ff;
+    color: #fff;
+    text-decoration: none;
+    border-radius: 2px;
+}
