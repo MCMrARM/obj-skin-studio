@@ -107,13 +107,15 @@ class Renderer {
         if (!this.hasModel || !this.hasTexture)
             return;
 
+        let scale = 1 / 16;
         let mat = mat4.create();
         mat4.perspective(mat, 0.5, this.canvas.width / this.canvas.height, 0.1, 100);
         let lookMat = mat4.create();
-        mat4.lookAt(lookMat, [-40, 0, 0], [0, 5, 0], [0, 1, 0]);
+        mat4.lookAt(lookMat, [-10, 0, 0], [0, 1, 0], [0, 1, 0]);
         mat4.mul(mat, mat, lookMat);
         mat4.rotateZ(mat, mat, this.rotationY);
         mat4.rotateY(mat, mat, this.rotationX);
+        mat4.scale(mat, mat, [scale, scale, scale]);
         gl.uniformMatrix4fv(this.projectionMatrixLocation, false, mat);
 
         gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexBuffer);
