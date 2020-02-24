@@ -331,7 +331,7 @@ class UiManager {
 
         UiHelper.loadImage("steve.png", (img) => this.setDefaultImage(img));
 
-        document.getElementById("upload-model").addEventListener("click", () => {
+        document.getElementById("uploadModel").addEventListener("click", () => {
             UiHelper.openFile((file) => {
                 let reader = new FileReader();
                 reader.addEventListener("loadend", () => {
@@ -345,7 +345,7 @@ class UiManager {
                 reader.readAsText(file);
             });
         });
-        document.getElementById("upload-texture").addEventListener("click", () => {
+        document.getElementById("uploadTexture").addEventListener("click", () => {
             UiHelper.openFile((file) => {
                 let reader = new FileReader();
                 reader.addEventListener("loadend", () => {
