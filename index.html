@@ -1,0 +1,31 @@
+<!doctype html>
+<html>
+<head>
+    <title>Skin Studio</title>
+</head>
+<body>
+<div class="skins">
+<ul>
+    <li><a href="#">Add skin</a></li>
+</ul>
+</div>
+<div class="main">
+    <canvas id="primaryCanvas" width="512" height="512"></canvas>
+</div>
+<script src="gl-matrix-min.js"></script>
+<script src="obj_parser.js"></script>
+<script src="renderer.js"></script>
+<script>
+    fetch("test.obj", {method: "GET"}).then(function (response) {
+        return response.text();
+    }).then(function (resp) {
+        let p = ObjModel.parse(resp);
+        console.log(p);
+
+        let renderer = new Renderer(document.getElementById("primaryCanvas"));
+        renderer.setModel(p);
+        renderer.setActive(true);
+    });
+</script>
+</body>
+</html>
