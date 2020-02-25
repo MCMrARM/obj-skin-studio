@@ -140,6 +140,12 @@ a {
 #point3DMoverZ .arrow {
     border-left: 8px solid blue;
 }
+#point3DMover .moveHandle:hover {
+    background: aqua;
+}
+#point3DMover .moveHandle:hover .arrow {
+    border-left: 8px solid aqua;
+}
 
 .prop-vec3 input {
     width: 40px;

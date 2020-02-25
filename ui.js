@@ -62,6 +62,17 @@ class UiHelper {
                 });
             };
 
+    // https://stackoverflow.com/questions/5666222/3d-line-plane-intersection
+    static linePlaneIntersection(planePoint, planeNormal, linePoint, lineDirection) {
+        if (vec3.dot(planeNormal, lineDirection) === 0)
+            return null;
+        let t = (vec3.dot(planeNormal, planePoint) - vec3.dot(planeNormal, linePoint)) / vec3.dot(planeNormal, lineDirection);
+        let ret = vec3.create();
+        vec3.scale(ret, lineDirection, t);
+        vec3.add(ret, linePoint, ret);
+        return ret;
+    }
+
 }
 
 class PropertyEditor {
@@ -84,6 +95,7 @@ class PropertyEditor {
         nameDom.textContent = name;
         li.appendChild(nameDom);
         let value = [...initialValue];
+        let tbs = [];
         for (let i = 0; i < initialValue.length; i++) {
             let tb = document.createElement("input");
             tb.type = "text";
@@ -93,8 +105,15 @@ class PropertyEditor {
                 cb([...value]);
             });
             li.appendChild(tb);
+            tbs.push(tb);
         }
         this.container.appendChild(li);
+        return (v) => {
+            for (let i = 0; i < tbs.length; i++) {
+                value[i] = v[i];
+                tbs[i].value = v[i];
+            }
+        };
     }
 
     addDropDown(name, values, displayValues, defaultValue, cb) {
@@ -184,7 +203,54 @@ class Point3DMover {
         this.primaryCanvas = primaryCanvas;
         this.relativeTo = this.primaryCanvas.canvas;
         this.point = null;
-        this.primaryCanvas.drawCallbacks.push(() => this.setPoint(this.point));
+        this.callback = null;
+        this.primaryCanvas.drawCallbacks.push(() => this.setPoint(this.point, this.callback));
+        this.setupAxis(this.axisX, 0);
+        this.setupAxis(this.axisY, 1);
+        this.setupAxis(this.axisZ, 2);
+    }
+
+    setupAxis(dom, axisNo) {
+        let findWorldPosition = (x, y) => {
+            let sp = this.primaryCanvas.renderer.sceneToScreen(this.point);
+            let spb1 = this.primaryCanvas.renderer.screenToScene([sp[0], sp[1], -1]);
+            let spb2 = this.primaryCanvas.renderer.screenToScene([sp[0], sp[1], 1]);
+            vec4.sub(spb2, spb2, spb1);
+            vec4.normalize(spb2, spb2);
+
+            let p1 = this.primaryCanvas.renderer.screenToScene([x, y, -1]);
+            let p2 = this.primaryCanvas.renderer.screenToScene([x, y, 1]);
+            vec4.sub(p2, p2, p1);
+            vec4.normalize(p2, p2);
+            return UiHelper.linePlaneIntersection(this.point, spb2, p1, p2);
+        };
+        let offset = [0, 0, 0];
+        let capturedPointerId = -1;
+        dom.addEventListener("pointerdown", (ev) => {
+            capturedPointerId = ev.pointerId;
+            dom.setPointerCapture(ev.pointerId);
+
+            let x = ev.pageX - this.relativeTo.offsetLeft;
+            let y = ev.pageY - this.relativeTo.offsetTop;
+            offset = findWorldPosition(x, y);
+            vec3.sub(offset, offset, this.point);
+        });
+        dom.addEventListener("pointermove", (ev) => {
+            if (this.callback !== null && ev.pointerId === capturedPointerId) {
+                let x = ev.pageX - this.relativeTo.offsetLeft;
+                let y = ev.pageY - this.relativeTo.offsetTop;
+                let p = findWorldPosition(x, y);
+                vec3.sub(p, p, offset);
+                this.point[axisNo] = p[axisNo];
+
+                this.callback(this.point);
+                this.setPoint(this.point, this.callback);
+            }
+        });
+        dom.addEventListener("pointerup", (ev) => {
+            capturedPointerId = -1;
+            dom.releasePointerCapture(ev.pointerId);
+        });
     }
 
     setAxis(dom, sp, spDir, depth) {
@@ -196,8 +262,9 @@ class Point3DMover {
         dom.style.zIndex = depth + 100;
     }
 
-    setPoint(p) {
+    setPoint(p, cb) {
         this.point = p;
+        this.callback = cb;
         if (p === null)
             return;
         let sp = this.primaryCanvas.renderer.sceneToScreen(p);
@@ -535,11 +602,17 @@ class PropertyManager {
     }
 
     createBoneProperties(bone) {
-        this.pointMover.setPoint(bone.pivot);
-        this.editor.addVecF("Pivot", bone.pivot, (val) => {
+        let updatePoint = null;
+        let updateVecF = this.editor.addVecF("Pivot", bone.pivot, (val) => {
             bone.pivot = val;
-            this.pointMover.setPoint(bone.pivot);
+            if (updatePoint !== null)
+                updatePoint();
         });
+        updatePoint = () => this.pointMover.setPoint(bone.pivot, (p) => {
+            bone.pivot = p;
+            updateVecF(p);
+        });
+        updatePoint();
     }
 
     createGroupProperties(group) {

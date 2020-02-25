@@ -160,4 +160,19 @@ class Renderer {
         return ret;
     }
 
+    screenToScene(point) {
+        let ret = vec4.create();
+        ret[0] = point[0] / this.canvas.width * 2 - 1;
+        ret[1] = -(point[1] / this.canvas.height * 2 - 1);
+        ret[2] = point[2];
+        ret[3] = 1;
+        let mat = this.createMatrix();
+        mat4.invert(mat, mat);
+        vec4.transformMat4(ret, ret, mat);
+        ret[0] = ret[0] / ret[3];
+        ret[1] = ret[1] / ret[3];
+        ret[2] = ret[2] / ret[3];
+        return ret;
+    }
+
 }
