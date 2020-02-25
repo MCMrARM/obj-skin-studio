@@ -37,31 +37,31 @@ class SharedData {
             {
                 "name": "leftArm",
                 "parent": "body",
-                "pivot": [ 5.0, 22.0, 0.0 ]
+                "pivot": [ -5.0, 22.0, 0.0 ]
             },
             {
                 "name": "leftSleeve",
                 "parent": "leftArm",
-                "pivot": [ 5.0, 22.0, 0.0 ]
+                "pivot": [ -5.0, 22.0, 0.0 ]
             },
             {
                 "name": "leftItem",
-                "pivot": [ 6.0, 15.0, 1.0 ],
+                "pivot": [ -6.0, 15.0, 1.0 ],
                 "parent": "leftArm"
             },
             {
                 "name": "rightArm",
                 "parent": "body",
-                "pivot": [ -5.0, 22.0, 0.0 ]
+                "pivot": [ 5.0, 22.0, 0.0 ]
             },
             {
                 "name": "rightSleeve",
                 "parent": "rightArm",
-                "pivot": [ -5.0, 22.0, 0.0 ]
+                "pivot": [ 5.0, 22.0, 0.0 ]
             },
             {
                 "name": "rightItem",
-                "pivot": [ -6, 15, 1 ],
+                "pivot": [ 6, 15, 1 ],
                 "locators": {
                     "lead_hold": [ -6, 15, 1 ]
                 },
@@ -71,23 +71,23 @@ class SharedData {
             {
                 "name": "leftLeg",
                 "parent": "root",
-                "pivot": [ 1.9, 12.0, 0.0 ]
+                "pivot": [ -1.9, 12.0, 0.0 ]
             },
             {
                 "name": "leftPants",
                 "parent": "leftLeg",
-                "pivot": [ 1.9, 12.0, 0.0 ]
+                "pivot": [ -1.9, 12.0, 0.0 ]
             },
 
             {
                 "name": "rightLeg",
                 "parent": "root",
-                "pivot": [ -1.9, 12.0, 0.0 ]
+                "pivot": [ 1.9, 12.0, 0.0 ]
             },
             {
                 "name": "rightPants",
                 "parent": "rightLeg",
-                "pivot": [ -1.9, 12.0, 0.0 ]
+                "pivot": [ 1.9, 12.0, 0.0 ]
             },
 
             {

@@ -199,6 +199,13 @@ class ObjModel {
         return indicesCopy;
     }
 
+    static flipX(vertexTab) {
+        let ret = [];
+        for (let v of vertexTab)
+            ret.push([-v[0], v[1], v[2]]);
+        return ret;
+    }
+
     exportPolyMesh(indices) {
         if (indices.length === 0)
             return null;
@@ -206,7 +213,7 @@ class ObjModel {
             return {
                 "normalized_uvs": true,
                 "normals": this.normalData,
-                "positions": this.vertexData,
+                "positions": ObjModel.flipX(this.vertexData),
                 "uvs": this.uvData,
                 "polys": indices
             };
@@ -218,7 +225,7 @@ class ObjModel {
         return {
             "normalized_uvs": true,
             "normals": scaledNormalData,
-            "positions": scaledVertexData,
+            "positions": ObjModel.flipX(scaledVertexData),
             "uvs": scaledUvData,
             "polys": indicesCopy
         };

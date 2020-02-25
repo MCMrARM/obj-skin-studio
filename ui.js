@@ -479,6 +479,8 @@ class Skin {
             let mesh = this.model.exportPolyMesh(indices);
             if (mesh !== null)
                 bCopy["poly_mesh"] = mesh;
+            if (bCopy.hasOwnProperty("pivot"))
+                bCopy["pivot"] = [-b.pivot[0], b.pivot[1], b.pivot[2]];
             bones.push(bCopy);
         }
         return {
