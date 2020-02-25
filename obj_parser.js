@@ -157,15 +157,70 @@ class ObjModel {
         }
     }
 
+    static collectUsedIndexes(indices, type) {
+        let set = new Set();
+        for (let i of indices)
+            for (let j of i)
+                set.add(j[type]);
+        let ret = Array.from(set);
+        ret.sort();
+        return ret;
+    }
+
+    static findMaxValue(arr) {
+        let max = 0;
+        for (let i of arr)
+            if (i > max)
+                max = i;
+        return max;
+    }
+
+    static scaleDownIndices(indices, arr, type) {
+        let used = ObjModel.collectUsedIndexes(indices, type);
+        let filteredArr = [];
+        let map = new Array(ObjModel.findMaxValue(used) + 1);
+        for (let i of used) {
+            map[i] = filteredArr.length;
+            filteredArr.push(arr[i]);
+        }
+        for (let i of indices)
+            for (let j of i)
+                j[type] = map[j[type]];
+        return filteredArr;
+    }
+
+    static createIndicesCopy(indices) {
+        let indicesCopy = [...indices];
+        for (let i = indicesCopy.length - 1; i >= 0; --i) {
+            indicesCopy[i] = [...indicesCopy[i]];
+            for (let j = indicesCopy[i].length - 1; j >= 0; --j)
+                indicesCopy[i][j] = [...indicesCopy[i][j]];
+        }
+        return indicesCopy;
+    }
+
     exportPolyMesh(indices) {
         if (indices.length === 0)
             return null;
-        return  {
+        if (indices.length === this.indices.length) {
+            return {
+                "normalized_uvs": true,
+                "normals": this.normalData,
+                "positions": this.vertexData,
+                "uvs": this.uvData,
+                "polys": indices
+            };
+        }
+        let indicesCopy = ObjModel.createIndicesCopy(indices);
+        let scaledVertexData = ObjModel.scaleDownIndices(indicesCopy, this.vertexData, ObjModel.INDEX_VERTEX);
+        let scaledNormalData = ObjModel.scaleDownIndices(indicesCopy, this.normalData, ObjModel.INDEX_NORMAL);
+        let scaledUvData = ObjModel.scaleDownIndices(indicesCopy, this.uvData, ObjModel.INDEX_UV);
+        return {
             "normalized_uvs": true,
-            "normals": this.normalData,
-            "positions": this.vertexData,
-            "uvs": this.uvData,
-            "polys": indices
+            "normals": scaledNormalData,
+            "positions": scaledVertexData,
+            "uvs": scaledUvData,
+            "polys": indicesCopy
         };
     }
 
