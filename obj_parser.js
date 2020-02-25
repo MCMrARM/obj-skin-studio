@@ -33,7 +33,8 @@ class ObjModel {
                 objectName = line.substr(2);
                 model.objects.push({
                     "name": objectName,
-                    "start": vertexNum,
+                    "start": model.indices.length,
+                    "vertexStart": vertexNum,
                     "groups": []
                 });
             } else if (t === "g" && currObject != null) {
@@ -41,7 +42,8 @@ class ObjModel {
                 currObject["groups"].push({
                     "name": groupName,
                     "displayName": objectName + "/" + groupName,
-                    "start": vertexNum
+                    "start": model.indices.length,
+                    "vertexStart": vertexNum,
                 });
             } else if (t === "f") {
                 let arr = [];
@@ -63,34 +65,45 @@ class ObjModel {
     }
 
     fixObjects() {
-        let end = this.getVertexCount() / 3;
+        let end = this.indices.length;
+        let vend = this.getVertexCount() / 3;
         for (let i = this.objects.length - 1; i >= 0; --i) {
-            let gend = end;
+            let gend = end, vgend = vend;
             for (let j = this.objects[i].groups.length - 1; j >= 0; --j) {
                 this.objects[i].groups[j]["end"] = gend;
+                this.objects[i].groups[j]["vertexEnd"] = vgend;
                 gend = this.objects[i].groups[j]["start"];
+                vgend = this.objects[i].groups[j]["vertexStart"];
             }
             if (gend > 0) {
                 this.objects[i].groups.push({
                     "name": null,
                     "displayName": this.objects[i].name,
                     "start": this.objects[i]["start"],
-                    "end": gend
+                    "end": gend,
+                    "vertexStart": this.objects[i]["vertexStart"],
+                    "vertexEnd": vgend
                 });
             }
             this.objects[i]["end"] = end;
+            this.objects[i]["vertexEnd"] = vend;
             end = this.objects[i]["start"];
+            vend = this.objects[i]["vertexStart"];
         }
         if (end > 0) {
             this.objects.push({
                 "name": null,
                 "start": 0,
                 "end": end,
+                "vertexStart": 0,
+                "vertexEnd": vend,
                 "groups": {
                     "name": null,
                     "displayName": "<default>",
                     "start": 0,
-                    "end": end
+                    "end": end,
+                    "vertexStart": 0,
+                    "vertexEnd": vend
                 }
             });
         }
@@ -130,10 +143,10 @@ class ObjModel {
         return array;
     }
 
-    getMinecraftIndices() {
+    getMinecraftIndices(array, start, end) {
         // There's a bug where Minecraft in fact only supports 4-sized indices, let's workaround it (it doesn't support 3-sided ones properly even)
-        let array = [];
-        for (let i of this.indices) {
+        for (let ix = start; ix < end; ix++) {
+            let i = this.indices[ix];
             for (let j = 0; j < i.length - 2; j += 2) {
                 if (j !== i.length - 3) { // If we have >=4 it's easy
                     array.push([i[0], i[j + 1], i[j + 2], i[j + 3]]);
@@ -142,7 +155,18 @@ class ObjModel {
                 }
             }
         }
-        return array;
+    }
+
+    exportPolyMesh(indices) {
+        if (indices.length === 0)
+            return null;
+        return  {
+            "normalized_uvs": true,
+            "normals": this.normalData,
+            "positions": this.vertexData,
+            "uvs": this.uvData,
+            "polys": indices
+        };
     }
 
 }

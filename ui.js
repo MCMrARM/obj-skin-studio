@@ -167,8 +167,8 @@ class PrimaryCanvas {
 
     setSelectedGroup(group) {
         if (group !== null) {
-            this.renderer.highlightedVertexStart = group.start;
-            this.renderer.highlightedVertexEnd = group.end;
+            this.renderer.highlightedVertexStart = group.vertexStart;
+            this.renderer.highlightedVertexEnd = group.vertexEnd;
         } else {
             this.renderer.highlightedVertexStart = -1;
             this.renderer.highlightedVertexEnd = -1;
@@ -367,6 +367,7 @@ class Skin {
         this.modelStr = null;
         this.bones = [];
         this.updateCb = new Set();
+        this.savePropertiesRequested = false;
     }
 
     loadFromLS() {
@@ -436,7 +437,7 @@ class Skin {
     deleteFromLS() {
         localStorage.removeItem("skin." + this.index + ".image");
         localStorage.removeItem("skin." + this.index + ".model");
-        localStorage.removeItem("skin." + this.index + ".options");
+        localStorage.removeItem("skin." + this.index + ".bones");
     }
 
     saveImageToLS() {
@@ -453,32 +454,35 @@ class Skin {
         localStorage.setItem("skin." + this.index + ".bones", JSON.stringify(this.bones));
     }
 
+    postSaveProperties() {
+        if (this.savePropertiesRequested)
+            return;
+        this.savePropertiesRequested = true;
+        setTimeout(() => {
+            this.saveBonesToLS();
+            this.savePropertiesRequested = false;
+        }, 1000);
+    }
+
     exportGeometry() {
         if (this.image === null || this.model === null)
             return null;
+        let bones = [];
+        for (let b of this.bones) {
+            let bCopy = Object.assign({}, b);
+            delete bCopy["groups"];
+            let indices = [];
+            for (let gidx of b.groups) {
+                let g = this.model.objects[gidx[0]].groups[gidx[1]];
+                this.model.getMinecraftIndices(indices, g.start, g.end);
+            }
+            let mesh = this.model.exportPolyMesh(indices);
+            if (mesh !== null)
+                bCopy["poly_mesh"] = mesh;
+            bones.push(bCopy);
+        }
         return {
-            "bones": [
-                {
-                    "name": "root"
-                },
-                {
-                    "name": "waist",
-                    "parent": "root",
-                    "pivot": [0, 12, 0]
-                },
-                {
-                    "name": "body",
-                    "parent": "waist",
-                    "pivot": [0, 24, 0],
-                    "poly_mesh": {
-                        "normalized_uvs": true,
-                        "normals": this.model.normalData,
-                        "positions": this.model.vertexData,
-                        "uvs": this.model.uvData,
-                        "polys": this.model.getMinecraftIndices()
-                    }
-                }
-            ],
+            "bones": bones,
             "texturewidth": this.image.width,
             "textureheight": this.image.height
         };
@@ -607,10 +611,12 @@ class PropertyManager {
             bone.pivot = val;
             if (updatePoint !== null)
                 updatePoint();
+            this.skin.postSaveProperties();
         });
         updatePoint = () => this.pointMover.setPoint(bone.pivot, (p) => {
             bone.pivot = p;
             updateVecF(p);
+            this.skin.postSaveProperties();
         });
         updatePoint();
     }
@@ -742,6 +748,7 @@ class UiManager {
             this.skins[i].saveModelToLS();
             this.skins[i].saveBonesToLS();
         }
+        skin.index = -1;
         localStorage.setItem("skin.count", this.skins.length);
         this.setSkins(this.skins);
     }
