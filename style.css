@@ -87,3 +87,60 @@ a {
     border-radius: 2px;
     cursor: pointer;
 }
+
+#point3DMover {
+    position: absolute;
+    left: 100px;
+    top: 100px;
+    z-index: 100;
+}
+#point3DMover .circle {
+    position: absolute;
+    left: -4px;
+    top: -4px;
+    width: 8px;
+    height: 8px;
+    background: #2979ff;
+    border: 1px solid white;
+    border-radius: 8px;
+    z-index: 104;
+}
+#point3DMover .moveHandle {
+    position: absolute;
+    left: 0;
+    top: -2px;
+    width: 50px;
+    height: 4px;
+    transform-origin: 0 50%;
+}
+#point3DMover .moveHandle .arrow {
+    position: absolute;
+    right: -8px;
+    top: -6px;
+    width: 0;
+    height: 0;
+    border-top: 8px solid transparent;
+    border-bottom: 8px solid transparent;
+}
+#point3DMoverX {
+    background: red;
+}
+#point3DMoverX .arrow {
+    border-left: 8px solid red;
+}
+#point3DMoverY {
+    background: green;
+}
+#point3DMoverY .arrow {
+    border-left: 8px solid green;
+}
+#point3DMoverZ {
+    background: blue;
+}
+#point3DMoverZ .arrow {
+    border-left: 8px solid blue;
+}
+
+.prop-vec3 input {
+    width: 40px;
+}

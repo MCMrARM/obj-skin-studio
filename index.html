@@ -14,22 +14,25 @@
     <div id="panel">
         <h3 class="panelTitle">Options</h3>
         <ul id="inspector">
-            <li>
+            <li id="inspectDefaultActions">
                 <a href="#" class="button" id="uploadModel">Upload model</a>
                 <a href="#" class="button" id="uploadTexture">Upload texture</a>
                 <a href="#" class="button" id="deleteSkin">Delete</a>
-            </li>
-            <li>
-                <span>Skin scale</span>
-                <input type="text" id="skinScale" value="1.0">
             </li>
         </ul>
         <h3 class="panelTitle">Geometry Hierarchy</h3>
         <ul id="groupTree"></ul>
     </div>
 </div>
+<div id="point3DMover">
+    <div class="moveHandle" id="point3DMoverX"><div class="arrow"></div></div>
+    <div class="moveHandle" id="point3DMoverY"><div class="arrow"></div></div>
+    <div class="moveHandle" id="point3DMoverZ"><div class="arrow"></div></div>
+    <div class="circle"></div>
+</div>
 <script src="gl-matrix-min.js"></script>
 <script src="zip.js"></script>
+<script src="data.js"></script>
 <script src="obj_parser.js"></script>
 <script src="renderer.js"></script>
 <script src="ui.js"></script>

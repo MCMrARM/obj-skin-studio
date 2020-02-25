@@ -77,6 +77,26 @@ class PropertyEditor {
         this.container.appendChild(defaultActions);
     }
 
+    addVecF(name, initialValue, cb) {
+        let li = document.createElement("li");
+        li.classList.add("prop-vec" + initialValue.length);
+        let nameDom = document.createElement("span");
+        nameDom.textContent = name;
+        li.appendChild(nameDom);
+        let value = [...initialValue];
+        for (let i = 0; i < initialValue.length; i++) {
+            let tb = document.createElement("input");
+            tb.type = "text";
+            tb.value = value[i];
+            tb.addEventListener("change", () => {
+                value[i] = parseFloat(tb.value);
+                cb([...value]);
+            });
+            li.appendChild(tb);
+        }
+        this.container.appendChild(li);
+    }
+
     addDropDown(name, values, displayValues, defaultValue, cb) {
         let li = document.createElement("li");
         let nameDom = document.createElement("span");
@@ -113,6 +133,7 @@ class PrimaryCanvas {
         });
 
         window.addEventListener('resize', () => this.draw(), false);
+        this.drawCallbacks = [];
     }
 
     setModel(model) {
@@ -147,6 +168,56 @@ class PrimaryCanvas {
         this.canvas.height  = this.canvas.offsetHeight;
 
         this.renderer.draw();
+        for (let cb of this.drawCallbacks)
+            cb();
+    }
+
+}
+
+class Point3DMover {
+
+    constructor(primaryCanvas) {
+        this.container = document.getElementById("point3DMover");
+        this.axisX = document.getElementById("point3DMoverX");
+        this.axisY = document.getElementById("point3DMoverY");
+        this.axisZ = document.getElementById("point3DMoverZ");
+        this.primaryCanvas = primaryCanvas;
+        this.relativeTo = this.primaryCanvas.canvas;
+        this.point = null;
+        this.primaryCanvas.drawCallbacks.push(() => this.setPoint(this.point));
+    }
+
+    setAxis(dom, sp, spDir, depth) {
+        let diff = vec2.create();
+        vec2.sub(diff, spDir, sp);
+        let angle = Math.atan2(diff[1], diff[0]);
+        dom.style.transform = "rotate(" + (angle / Math.PI * 180) + "deg)";
+        dom.style.width = vec2.length(diff) + "px";
+        dom.style.zIndex = depth + 100;
+    }
+
+    setPoint(p) {
+        this.point = p;
+        if (p === null)
+            return;
+        let sp = this.primaryCanvas.renderer.sceneToScreen(p);
+        let spX = this.primaryCanvas.renderer.sceneToScreen([p[0] + 3, p[1], p[2]]);
+        let spY = this.primaryCanvas.renderer.sceneToScreen([p[0], p[1] + 3, p[2]]);
+        let spZ = this.primaryCanvas.renderer.sceneToScreen([p[0], p[1], p[2] + 3]);
+        let depthTmp = [[spX[2], 0], [spY[2], 1], [spZ[2], 2]];
+        depthTmp.sort();
+        let depth = [0, 1, 2];
+        for (let i = 0; i < 3; i++)
+            depth[depthTmp[i][1]] = 2 - i;
+
+        this.setAxis(this.axisX, sp, spX, depth[0]);
+        this.setAxis(this.axisY, sp, spY, depth[1]);
+        this.setAxis(this.axisZ, sp, spZ, depth[2]);
+
+        sp[0] += this.relativeTo.offsetLeft;
+        sp[1] += this.relativeTo.offsetTop;
+        this.container.style.left = sp[0] + "px";
+        this.container.style.top = sp[1] + "px";
     }
 
 }
@@ -428,12 +499,13 @@ class SkinListUi {
 
 class PropertyManager {
 
-    constructor(editor) {
+    constructor(editor, pointMover) {
         this.editor = editor;
         this.skin = null;
         this.selectionType = null;
         this.selection = null;
         this.boneChangeCallback = null;
+        this.pointMover = pointMover;
     }
 
     setSkin(skin) {
@@ -450,12 +522,24 @@ class PropertyManager {
         if (this.skin !== null) {
             this.createSkinProperties(this.skin);
         }
+        if (this.selectionType === GroupList.TYPE_BONE) {
+            this.createBoneProperties(this.selection);
+        }
         if (this.selectionType === GroupList.TYPE_GROUP) {
+            this.createBoneProperties(this.selection.bone);
             this.createGroupProperties(this.selection);
         }
     }
 
     createSkinProperties(skin) {
+    }
+
+    createBoneProperties(bone) {
+        this.pointMover.setPoint(bone.pivot);
+        this.editor.addVecF("Pivot", bone.pivot, (val) => {
+            bone.pivot = val;
+            this.pointMover.setPoint(bone.pivot);
+        });
     }
 
     createGroupProperties(group) {
@@ -491,7 +575,8 @@ class UiManager {
         this.primaryCanvas = new PrimaryCanvas();
         this.skinListUi = new SkinListUi((skin) => this.setSkin(skin));
         this.propEditor = new PropertyEditor();
-        this.propManager = new PropertyManager(this.propEditor);
+        this.pointMover = new Point3DMover(this.primaryCanvas);
+        this.propManager = new PropertyManager(this.propEditor, this.pointMover);
         this.groupList = new GroupList((type, g) => {
             if (type === GroupList.TYPE_GROUP)
                 this.primaryCanvas.setSelectedGroup(g);

@@ -1,4 +1,7 @@
 let mat4 = glMatrix.mat4;
+let vec2 = glMatrix.vec2;
+let vec3 = glMatrix.vec3;
+let vec4 = glMatrix.vec4;
 
 class Renderer {
 
@@ -95,6 +98,19 @@ class Renderer {
         this.hasTexture = true;
     }
 
+    createMatrix() {
+        let scale = 1 / 16;
+        let mat = mat4.create();
+        mat4.perspective(mat, 0.5, this.canvas.width / this.canvas.height, 0.1, 100);
+        let lookMat = mat4.create();
+        mat4.lookAt(lookMat, [0, 0, -10], [0, 1, 0], [0, 1, 0]);
+        mat4.mul(mat, mat, lookMat);
+        mat4.rotateX(mat, mat, -this.rotationY);
+        mat4.rotateY(mat, mat, this.rotationX);
+        mat4.scale(mat, mat, [scale, scale, scale]);
+        return mat;
+    }
+
     draw() {
         let gl = this.context;
         gl.viewport(0, 0, this.canvas.width, this.canvas.height);
@@ -105,15 +121,7 @@ class Renderer {
         if (!this.hasModel || !this.hasTexture)
             return;
 
-        let scale = 1 / 16;
-        let mat = mat4.create();
-        mat4.perspective(mat, 0.5, this.canvas.width / this.canvas.height, 0.1, 100);
-        let lookMat = mat4.create();
-        mat4.lookAt(lookMat, [0, 0, -10], [0, 1, 0], [0, 1, 0]);
-        mat4.mul(mat, mat, lookMat);
-        mat4.rotateX(mat, mat, -this.rotationY);
-        mat4.rotateY(mat, mat, this.rotationX);
-        mat4.scale(mat, mat, [scale, scale, scale]);
+        let mat = this.createMatrix();
         gl.uniformMatrix4fv(this.projectionMatrixLocation, false, mat);
 
         gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexBuffer);
@@ -136,6 +144,20 @@ class Renderer {
             gl.uniform4f(this.colorLocation, 0.5, 0.5, 1.0, 0.75);
             gl.drawArrays(gl.TRIANGLES, (this.highlightedVertexStart) * 3, (this.highlightedVertexEnd - this.highlightedVertexStart) * 3);
         }
+    }
+
+    sceneToScreen(point) {
+        let ret = vec4.create();
+        ret[0] = point[0];
+        ret[1] = point[1];
+        ret[2] = point[2];
+        ret[3] = 1;
+        let mat = this.createMatrix();
+        vec4.transformMat4(ret, ret, mat);
+        ret[0] = (ret[0] / ret[3] + 1) / 2 * this.canvas.width;
+        ret[1] = (-ret[1] / ret[3] + 1) / 2 * this.canvas.height;
+        ret[2] = ret[2] / ret[3];
+        return ret;
     }
 
 }
