@@ -64,6 +64,41 @@ class UiHelper {
 
 }
 
+class PropertyEditor {
+
+    constructor() {
+        this.container = document.getElementById("inspector");
+    }
+
+    clear() {
+        let defaultActions = document.getElementById("inspectDefaultActions");
+        while (this.container.firstChild)
+            this.container.removeChild(this.container.lastChild);
+        this.container.appendChild(defaultActions);
+    }
+
+    addDropDown(name, values, displayValues, defaultValue, cb) {
+        let li = document.createElement("li");
+        let nameDom = document.createElement("span");
+        nameDom.textContent = name;
+        li.appendChild(nameDom);
+        let selectDom = document.createElement("select");
+        for (let i = 0; i < values.length; i++) {
+            let el = document.createElement("option");
+            el.textContent = displayValues[i];
+            el.value = values[i];
+            selectDom.appendChild(el);
+        }
+        selectDom.value = defaultValue;
+        selectDom.addEventListener("change", () => {
+            cb(selectDom.value);
+        });
+        li.appendChild(selectDom);
+        this.container.appendChild(li);
+    }
+
+}
+
 class PrimaryCanvas {
 
     constructor() {
@@ -118,42 +153,65 @@ class PrimaryCanvas {
 
 class GroupList {
 
+    static TYPE_BONE = "bone";
+    static TYPE_GROUP = "group";
+
     constructor(selectCallback) {
         this.container = document.getElementById("groupTree");
-        this.selectedElement = null;
         this.selectCallback = selectCallback;
+        this.selectionType = null;
+        this.selection = null;
+        this.selectionMap = {};
+        this.selectionMap[GroupList.TYPE_BONE] = new Map();
+        this.selectionMap[GroupList.TYPE_GROUP] = new Map();
+        this.selectedElement = null;
     }
 
-    setObjects(objects) {
+    setObjects(objects, bones) {
         // Clear old groups
         while (this.container.firstChild)
             this.container.removeChild(this.container.lastChild);
         this.selectedElement = null;
 
-        for (let object of objects) {
-            let objectName = object.name ? object.name : "<default>";
-            for (let group of object.groups) {
-                let groupName = group.name ? objectName + "/" + group.name : objectName;
-                this.container.appendChild(this.createGroupDOM(group, groupName));
+        this.selectionMap[GroupList.TYPE_BONE].clear();
+        this.selectionMap[GroupList.TYPE_GROUP].clear();
+        for (let bone of bones) {
+            let rel = this.createElementDOM(GroupList.TYPE_BONE, bone, bone.name);
+            this.selectionMap[GroupList.TYPE_BONE].set(bone, rel);
+            this.container.appendChild(rel);
+            for (let groupIdx of bone.groups) {
+                let group = objects[groupIdx[0]].groups[groupIdx[1]];
+                let el = this.createElementDOM(GroupList.TYPE_GROUP, group, group.displayName);
+                this.selectionMap[GroupList.TYPE_GROUP].set(group, el);
+                el.style.paddingLeft = "20px";
+                this.container.appendChild(el);
             }
         }
+        this.setSelection(this.selectionType, this.selection);
     }
 
-    createGroupDOM(group, name) {
+    setSelection(type, object) {
+        if (this.selectedElement !== null)
+            this.selectedElement.classList.remove("selected");
+        this.selectionType = type;
+        this.selection = object;
+        this.selectedElement = type !== null ? this.selectionMap[type].get(object) : null;
+        if (this.selectedElement === undefined)
+            this.selectedElement = null;
+        if (this.selectedElement !== null)
+            this.selectedElement.classList.add("selected");
+        this.selectCallback(type, object);
+    }
+
+    createElementDOM(type, object, name) {
         let e = document.createElement("li");
         let text = document.createElement("span");
         text.textContent = name;
         e.addEventListener("click", () => {
-            if (this.selectedElement !== null)
-                this.selectedElement.classList.remove("selected");
-            if (this.selectedElement !== e) {
-                e.classList.add("selected");
-                this.selectedElement = e;
-                this.selectCallback(group);
-            } else {
-                this.selectedElement = null;
-                this.selectCallback(null);
-            }
+            if (this.selectedElement !== e)
+                this.setSelection(type, object);
+            else
+                this.setSelection(null, null);
         });
         e.appendChild(text);
         return e;
@@ -169,6 +227,7 @@ class Skin {
         this.imageUrl = null;
         this.model = null;
         this.modelStr = null;
+        this.bones = [];
         this.updateCb = new Set();
     }
 
@@ -176,6 +235,10 @@ class Skin {
         this.setImage(localStorage.getItem("skin." + this.index + ".image"));
         this.modelStr = localStorage.getItem("skin." + this.index + ".model");
         this.model = this.modelStr ? ObjModel.parse(this.modelStr) : null;
+        this.bones = JSON.parse(localStorage.getItem("skin." + this.index + ".bones"));
+        if (this.bones === null)
+            this.resetBones();
+        this.assignBoneInfoToGroups();
         this.onUpdated();
     }
 
@@ -193,9 +256,49 @@ class Skin {
         });
     }
 
+    setModel(model) {
+        this.modelStr = model;
+        this.model = ObjModel.parse(model);
+        this.resetBones();
+        this.assignBoneInfoToGroups();
+    }
+
+    resetBones() {
+        this.bones = SharedData.createDefaultBones();
+        for (let b of this.bones)
+            b.groups = [];
+        if (this.model !== null) {
+            let mainBone = this.bones[1];
+            for (let i = 0; i < this.model.objects.length; i++) {
+                let object = this.model.objects[i];
+                for (let j = 0; j < object.groups.length; j++)
+                    mainBone.groups.push([i, j]);
+            }
+        }
+    }
+
+    assignBoneInfoToGroups() {
+        for (let i = 0; i < this.model.objects.length; i++) {
+            let o = this.model.objects[i];
+            o.index = i;
+            for (let j = 0; j < o.groups.length; j++) {
+                o.groups[j].object = o;
+                o.groups[j].index = j;
+            }
+        }
+        for (let b of this.bones) {
+            for (let gRef of b.groups) {
+                let group = this.model.objects[gRef[0]].groups[gRef[1]];
+                group.bone = b;
+                group.indexTab = gRef;
+            }
+        }
+    }
+
     deleteFromLS() {
         localStorage.removeItem("skin." + this.index + ".image");
         localStorage.removeItem("skin." + this.index + ".model");
+        localStorage.removeItem("skin." + this.index + ".options");
     }
 
     saveImageToLS() {
@@ -206,6 +309,10 @@ class Skin {
     saveModelToLS() {
         if (this.modelStr !== null)
             localStorage.setItem("skin." + this.index + ".model", this.modelStr);
+    }
+
+    saveBonesToLS() {
+        localStorage.setItem("skin." + this.index + ".bones", JSON.stringify(this.bones));
     }
 
     exportGeometry() {
@@ -319,14 +426,85 @@ class SkinListUi {
 
 }
 
+class PropertyManager {
+
+    constructor(editor) {
+        this.editor = editor;
+        this.skin = null;
+        this.selectionType = null;
+        this.selection = null;
+        this.boneChangeCallback = null;
+    }
+
+    setSkin(skin) {
+        this.skin = skin;
+    }
+
+    setSelection(type, what) {
+        this.selectionType = type;
+        this.selection = what;
+    }
+
+    update() {
+        this.editor.clear();
+        if (this.skin !== null) {
+            this.createSkinProperties(this.skin);
+        }
+        if (this.selectionType === GroupList.TYPE_GROUP) {
+            this.createGroupProperties(this.selection);
+        }
+    }
+
+    createSkinProperties(skin) {
+    }
+
+    createGroupProperties(group) {
+        let boneNames = [];
+        for (let bone of this.skin.bones)
+            boneNames.push(bone.name);
+        this.editor.addDropDown("Bone", boneNames, boneNames, group.bone.name, (newBoneName) => {
+            let newBone = null;
+            for (let bone of this.skin.bones) {
+                if (bone.name === newBoneName) {
+                    newBone = bone;
+                    break;
+                }
+            }
+
+            let iof = group.bone.groups.indexOf(group.indexTab);
+            if (newBone === null || iof === -1 || newBone === group.bone)
+                return;
+            group.bone.groups.splice(iof, 1);
+            group.bone = newBone;
+            newBone.groups.push(group.indexTab);
+            this.boneChangeCallback();
+        });
+    }
+
+}
+
 class UiManager {
 
     constructor() {
         this.skins = [];
         this.activeSkin = null;
         this.primaryCanvas = new PrimaryCanvas();
-        this.groupList = new GroupList((g) => this.primaryCanvas.setSelectedGroup(g));
         this.skinListUi = new SkinListUi((skin) => this.setSkin(skin));
+        this.propEditor = new PropertyEditor();
+        this.propManager = new PropertyManager(this.propEditor);
+        this.groupList = new GroupList((type, g) => {
+            if (type === GroupList.TYPE_GROUP)
+                this.primaryCanvas.setSelectedGroup(g);
+            else
+                this.primaryCanvas.setSelectedGroup(null);
+
+            this.propManager.setSelection(type, g);
+            this.propManager.update();
+        });
+        this.propManager.boneChangeCallback = () => {
+            this.groupList.setObjects(this.activeSkin.model.objects, this.activeSkin.bones);
+            this.activeSkin.saveBonesToLS();
+        };
         this.defaultImage = null;
 
         UiHelper.loadImage("steve.png", (img) => this.setDefaultImage(img));
@@ -336,8 +514,7 @@ class UiManager {
                 let reader = new FileReader();
                 reader.addEventListener("loadend", () => {
                     if (reader.readyState === FileReader.DONE && this.activeSkin !== null) {
-                        this.activeSkin.modelStr = reader.result;
-                        this.activeSkin.model = ObjModel.parse(reader.result);
+                        this.activeSkin.setModel(reader.result);
                         this.activeSkin.saveModelToLS();
                         this.activeSkin.onUpdated();
                     }
@@ -382,8 +559,10 @@ class UiManager {
             this.primaryCanvas.setTexture(this.defaultImage);
         this.primaryCanvas.setModel(skin.model);
         if (skin.model !== null)
-            this.groupList.setObjects(skin.model.objects);
+            this.groupList.setObjects(skin.model.objects, skin.bones);
         this.skinListUi.setSelected(skin);
+        this.propManager.setSkin(skin);
+        this.propManager.update();
     }
 
     createSkin(index) {
@@ -403,6 +582,7 @@ class UiManager {
             this.skins[i].index = i;
             this.skins[i].saveImageToLS();
             this.skins[i].saveModelToLS();
+            this.skins[i].saveBonesToLS();
         }
         localStorage.setItem("skin.count", this.skins.length);
         this.setSkins(this.skins);

@@ -16,6 +16,7 @@ class ObjModel {
         let model = new ObjModel([], [], [], []);
         let lines = data.split("\n");
         let vertexNum = 0;
+        let objectName = "<default>";
         for (let line of lines) {
             line = line.trim();
             if (line.startsWith("#"))
@@ -29,14 +30,17 @@ class ObjModel {
             } else if (t === "vt") {
                 model.uvData.push([parseFloat(p[1]), parseFloat(p[2])]);
             } else if (t === "o") {
+                objectName = line.substr(2);
                 model.objects.push({
-                    "name": line.substr(2),
+                    "name": objectName,
                     "start": vertexNum,
                     "groups": []
                 });
             } else if (t === "g" && currObject != null) {
+                let groupName = line.substr(2);
                 currObject["groups"].push({
-                    "name": line.substr(2),
+                    "name": groupName,
+                    "displayName": objectName + "/" + groupName,
                     "start": vertexNum
                 });
             } else if (t === "f") {
@@ -69,6 +73,7 @@ class ObjModel {
             if (gend > 0) {
                 this.objects[i].groups.push({
                     "name": null,
+                    "displayName": this.objects[i].name,
                     "start": this.objects[i]["start"],
                     "end": gend
                 });
@@ -80,7 +85,13 @@ class ObjModel {
             this.objects.push({
                 "name": null,
                 "start": 0,
-                "end": end
+                "end": end,
+                "groups": {
+                    "name": null,
+                    "displayName": "<default>",
+                    "start": 0,
+                    "end": end
+                }
             });
         }
     }
